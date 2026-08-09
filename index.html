@@ -144,6 +144,14 @@ textarea.form-control{resize:vertical;min-height:60px}
 .modal{background:var(--card);border-radius:20px;width:90%;max-width:560px;max-height:88vh;overflow-y:auto;padding:28px}
 .modal-title{font-size:18px;font-weight:700;margin-bottom:20px}
 .modal-close{float:right;cursor:pointer;font-size:24px;color:var(--text3);line-height:1;border:none;background:none}
+.import-spinner{width:36px;height:36px;border:3px solid var(--bg2);border-top-color:var(--dark);border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.recog-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;margin-left:8px}
+.recog-badge.high{background:#E8F5E4;color:#5A8A50}
+.recog-badge.mid{background:#FDF0E6;color:#9C6B3F}
+.recog-badge.low{background:#FDECEC;color:#C44}
+.import-color-swatch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.import-color-swatch .sw{width:20px;height:20px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
 
 /* ======= EMPTY STATE ======= */
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
@@ -438,7 +446,22 @@ textarea.form-control{resize:vertical;min-height:60px}
 
 <!-- ======= MODALS ======= -->
 <div class="modal-overlay" id="modal-add"><div class="modal"><button class="modal-close" onclick="closeModal('modal-add')">×</button><div class="modal-title" id="modal-add-title">添加衣物</div><div id="modal-add-body"></div></div></div>
-<div class="modal-overlay" id="modal-import"><div class="modal"><button class="modal-close" onclick="closeModal('modal-import')">×</button><div class="modal-title">拍照识别衣物</div><div class="form-group"><label>选择衣物照片</label><input type="file" accept="image/*" class="form-control" id="import-file" onchange="onPhotoSelected(event)"></div><div id="import-preview" style="display:none"><div style="text-align:center;margin-bottom:16px"><img id="import-img" style="max-width:200px;max-height:200px;border-radius:10px" /></div><p style="font-size:13px;color:var(--text2);margin-bottom:14px">AI 将自动识别衣物类型和颜色，请在下方确认或修改后保存：</p><div id="import-fields"></div><button class="btn btn-dark" onclick="confirmImport()">确认添加</button></div></div></div>
+<div class="modal-overlay" id="modal-import"><div class="modal"><button class="modal-close" onclick="closeModal('modal-import')">×</button><div class="modal-title">拍照识别衣物</div>
+    <div class="form-group">
+      <label>选择衣物照片</label>
+      <input type="file" accept="image/*" class="form-control" id="import-file" onchange="onPhotoSelected(event)">
+    </div>
+    <div id="import-preview" style="display:none">
+      <div style="text-align:center;margin-bottom:16px"><img id="import-img" style="max-width:200px;max-height:200px;border-radius:10px" /></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">AI 已自动识别衣物信息，请在下方确认或修改后保存：</p>
+      <div id="import-fields"></div>
+      <button class="btn btn-dark" onclick="confirmImport()">确认添加</button>
+    </div>
+    <div id="import-loading" style="display:none;text-align:center;padding:30px 0">
+      <div class="import-spinner"></div>
+      <p style="font-size:14px;color:var(--text2);margin-top:16px">AI 正在识别衣物信息...</p>
+    </div>
+  </div></div>
 
 <!-- Camera Preview -->
 <div class="camera-preview" id="camera-preview">
@@ -757,12 +780,260 @@ function deleteCloth(id){if(!confirm('确认删除这件衣物？'))return;DB.cl
 // ============================================================
 //  PHOTO IMPORT
 // ============================================================
-function openImportModal(){document.getElementById('import-file').value='';document.getElementById('import-preview').style.display='none';openModal('modal-import')}
+function openImportModal(){document.getElementById('import-file').value='';document.getElementById('import-preview').style.display='none';document.getElementById('import-loading').style.display='none';openModal('modal-import')}
 function onPhotoSelected(e){
   const file=e.target.files[0];if(!file)return;
+  // Show loading
+  document.getElementById('import-preview').style.display='none';
+  document.getElementById('import-loading').style.display='block';
   const reader=new FileReader();
-  reader.onload=ev=>{document.getElementById('import-img').src=ev.target.result;document.getElementById('import-img').dataset.b64=ev.target.result;document.getElementById('import-preview').style.display='block';setTimeout(()=>simulateAIRecognize(file),600)};
+  reader.onload=ev=>{
+    document.getElementById('import-img').src=ev.target.result;
+    document.getElementById('import-img').dataset.b64=ev.target.result;
+    // Run real image recognition after a short delay for UX
+    setTimeout(()=>recognizeClothing(ev.target.result),400);
+  };
   reader.readAsDataURL(file);
+}
+
+// ============================================================
+//  REAL IMAGE RECOGNITION (Canvas-based local analysis)
+// ============================================================
+function recognizeClothing(dataUrl){
+  const img=new Image();
+  img.onload=()=>{
+    const canvas=document.createElement('canvas');
+    const maxW=500;const scale=Math.min(1,maxW/img.width);
+    canvas.width=img.width*scale;canvas.height=img.height*scale;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+
+    // -- 1. Extract dominant colors --
+    const colorBuckets={};
+    const edgeBuckets={};
+    const w=canvas.width,h=canvas.height,step=4;
+    let totalPixels=0,bgPixels=0;
+
+    // First pass: detect background color (4 corners)
+    const corners=[[0,0],[w-1,0],[0,h-1],[w-1,h-1]];
+    const bgColors=[];
+    for(const[cx,cy]of corners){const idx=(cy*w+cx)*4;bgColors.push([data[idx],data[idx+1],data[idx+2]])}
+    const bgR=bgColors.reduce((s,c)=>s+c[0],0)/4;
+    const bgG=bgColors.reduce((s,c)=>s+c[1],0)/4;
+    const bgB=bgColors.reduce((s,c)=>s+c[2],0)/4;
+
+    for(let i=0;i<data.length;i+=4*step){
+      const r=data[i],g=data[i+1],b=data[i+2];
+      const pixelIdx=i/4;
+      const px=pixelIdx%w,py=Math.floor(pixelIdx/w);
+      totalPixels++;
+      // Skip near-background pixels (within 30 distance of corner avg)
+      const bgDist=Math.sqrt((r-bgR)**2+(g-bgG)**2+(b-bgB)**2);
+      if(bgDist<30){bgPixels++;continue}
+      // Skip near-white and near-black (likely background/lighting)
+      if(r>245&&g>245&&b>245)continue;
+      if(r<12&&g<12&&b<12)continue;
+      const bucket=colorToBucket(r,g,b);
+      colorBuckets[bucket]=(colorBuckets[bucket]||0)+1;
+      // Edge detection: compare with right and bottom neighbor
+      if(px<w-step&&py<h-step){
+        const rightIdx=((py)*w+(px+step))*4;
+        const downIdx=((py+step)*w+px)*4;
+        const dr=Math.abs(r-data[rightIdx]);const dg=Math.abs(g-data[rightIdx+1]);const db=Math.abs(b-data[rightIdx+2]);
+        const dd_r=Math.abs(r-data[downIdx]);const dd_g=Math.abs(g-data[downIdx+1]);const dd_b=Math.abs(b-data[downIdx+2]);
+        const edgeMag=Math.max(dr+dg+db,dd_r+dd_g+dd_b);
+        if(edgeMag>40){const eb=colorToBucket(r,g,b);edgeBuckets[eb]=(edgeBuckets[eb]||0)+1}
+      }
+    }
+    const sortedColors=Object.entries(colorBuckets).sort((a,b)=>b[1]-a[1]);
+    const totalSampled=sortedColors.reduce((s,[,v])=>s+v,0)||1;
+    const dominantColor=sortedColors[0]?.[0]||'other';
+    const secondColor=sortedColors[1]?.[0]||null;
+    const dominantPct=sortedColors[0]?Math.round(sortedColors[0][1]/totalSampled*100):0;
+    const bgColorPct=Math.round(bgPixels/totalPixels*100);
+
+    // -- 2. Shape analysis: aspect ratio & dominant region --
+    const aspectRatio=img.height/img.width;
+    // Find vertical center of mass (where is the clothing concentrated?)
+    let topY=h,bottomY=0,leftX=w,rightX=0;
+    for(let i=0;i<data.length;i+=4*step){
+      const r=data[i],g=data[i+1],b=data[i+2];
+      const pixelIdx=i/4;const px=pixelIdx%w,py=Math.floor(pixelIdx/w);
+      const bgDist=Math.sqrt((r-bgR)**2+(g-bgG)**2+(b-bgB)**2);
+      if(bgDist>30&&!(r>245&&g>245&&b>245)&&!(r<12&&g<12&&b<12)){
+        if(py<topY)topY=py;if(py>bottomY)bottomY=py;
+        if(px<leftX)leftX=px;if(px>rightX)rightX=px;
+      }
+    }
+    const objHeight=bottomY-topY;
+    const objWidth=rightX-leftX;
+    const objAspect=objHeight/(objWidth||1);
+    const widthCoverage=objWidth/w;
+    const heightCoverage=objHeight/h;
+
+    // -- 3. Color distribution regions (top third vs bottom third) --
+    const topColorBuckets={},bottomColorBuckets={};
+    for(let i=0;i<data.length;i+=4*step){
+      const r=data[i],g=data[i+1],b=data[i+2];
+      const pixelIdx=i/4;const px=pixelIdx%w,py=Math.floor(pixelIdx/w);
+      const bgDist=Math.sqrt((r-bgR)**2+(g-bgG)**2+(b-bgB)**2);
+      if(bgDist<30||r>245&&g>245&&b>245||r<12&&g<12&&b<12)continue;
+      const bucket=colorToBucket(r,g,b);
+      if(py<topY+objHeight*0.33)topColorBuckets[bucket]=(topColorBuckets[bucket]||0)+1;
+      else if(py>bottomY-objHeight*0.33)bottomColorBuckets[bucket]=(bottomColorBuckets[bucket]||0)+1;
+    }
+    const topDominant=Object.entries(topColorBuckets).sort((a,b)=>b[1]-a[1])[0];
+    const bottomDominant=Object.entries(bottomColorBuckets).sort((a,b)=>b[1]-a[1])[0];
+    // If top and bottom have different dominant colors, might be two-piece (top+bottom) -> we treat as the top
+    const isTwoTone=topDominant&&bottomDominant&&topDominant[0]!==bottomDominant[0]&&Math.abs((topDominant[1]||0)-(bottomDominant[1]||0))>totalSampled*0.1;
+
+    // -- 4. Color saturation (to distinguish saturated vs neutral) --
+    let avgSat=0,satCount=0;
+    for(let i=0;i<data.length;i+=4*step*2){
+      const r=data[i],g=data[i+1],b=data[i+2];
+      const max=Math.max(r,g,b),min=Math.min(r,g,b);
+      const sat=max===0?0:(max-min)/max;
+      avgSat+=sat;satCount++;
+    }
+    avgSat=avgSat/(satCount||1);
+
+    // -- 5. Brightness analysis --
+    let avgBright=0,brightCount=0;
+    for(let i=0;i<data.length;i+=4*step){
+      const r=data[i],g=data[i+1],b=data[i+2];
+      const bgDist=Math.sqrt((r-bgR)**2+(g-bgG)**2+(b-bgB)**2);
+      if(bgDist<30)continue;
+      avgBright+=(r*0.299+g*0.587+b*0.114);brightCount++;
+    }
+    avgBright=avgBright/(brightCount||1);
+
+    // -- 6. Guess clothing category based on shape & color features --
+    let guessCat='top',guessSub='tshirt',guessThickness='light',guessStyles=[],guessSeasons=[],confidence='mid';
+    const neutralColors=['black','white','gray','navy','charcoal','beige','khaki','cream'];
+    const isNeutral=neutralColors.includes(dominantColor);
+
+    // Very tall and narrow -> likely dress or long coat
+    if(objAspect>1.6&&widthCoverage>0.5){
+      guessCat='set';guessSub='dress';guessThickness=avgBright<80?'medium':'light';
+      guessStyles=['romantic','minimal'];guessSeasons=['spring','summer','autumn'];
+      confidence='high';
+    }
+    // Tall and wide coverage -> likely coat/down jacket
+    else if(objAspect>1.2&&heightCoverage>0.7){
+      guessCat='outerwear';
+      if(avgBright<80){guessSub='down_jacket';guessThickness='thick'}
+      else if(dominantColor==='beige'||dominantColor==='khaki'||dominantColor==='brown'){guessSub='coat';guessThickness='medium'}
+      else{guessSub='jacket';guessThickness='medium'}
+      guessStyles=['casual'];guessSeasons=['autumn','winter'];
+      confidence='high';
+    }
+    // Short and wide -> likely pants or skirt (laid flat)
+    else if(objAspect<0.9&&widthCoverage>0.5){
+      guessCat='bottom';
+      if(dominantColor==='blue'||secondColor==='blue'){guessSub='jeans';guessThickness='medium'}
+      else{guessSub='pants';guessThickness='light'}
+      guessStyles=['casual'];guessSeasons=['spring','autumn'];
+      confidence='mid';
+    }
+    // Moderate aspect, square-ish -> likely top
+    else if(objAspect>=0.8&&objAspect<=1.5){
+      guessCat='top';
+      // Dark + thick-feeling -> hoodie or sweater
+      if(avgBright<80&&avgSat<0.15){guessSub='hoodie';guessThickness='medium';guessStyles=['street','casual'];guessSeasons=['autumn','winter']}
+      // Neutral + light -> shirt or tshirt
+      else if(isNeutral&&avgBright>120){
+        guessSub=avgSat<0.1?'shirt':'tshirt';guessThickness='light';guessStyles=['minimal','casual'];guessSeasons=['spring','summer']
+      }
+      // Saturated color -> tshirt
+      else if(avgSat>0.25){guessSub='tshirt';guessThickness='light';guessStyles=['casual'];guessSeasons=['spring','summer']}
+      else{guessSub='tshirt';guessThickness='light';guessStyles=['casual'];guessSeasons=['spring','summer']}
+      confidence='mid';
+    }
+    // Very short and small -> likely shoes
+    else if(objAspect<0.6&&heightCoverage<0.4){
+      guessCat='shoes';guessSub='sneakers';guessThickness='light';guessStyles=['sports','casual'];guessSeasons=['spring','summer','autumn'];
+      confidence='low';
+    }
+    // Fallback: top
+    else{guessCat='top';guessSub='tshirt';guessThickness='light';guessStyles=['casual'];guessSeasons=['spring','summer'];confidence='low'}
+
+    // -- 7. Refine styles based on color --
+    if(dominantColor==='black'||dominantColor==='charcoal'||dominantColor==='navy'){
+      if(guessStyles.includes('casual')&&!guessStyles.includes('business-casual')){guessStyles.unshift('minimal')}
+    }
+    if(dominantColor==='burgundy'||dominantColor==='red'||dominantColor==='pink'){
+      guessStyles=['romantic'];
+    }
+    if(dominantColor==='olive'||dominantColor==='brown'||dominantColor==='khaki'){
+      if(!guessStyles.includes('workwear'))guessStyles.push('workwear');
+    }
+    if(dominantColor==='floral'||avgSat>0.3){
+      if(!guessStyles.includes('retro'))guessStyles.push('retro');
+    }
+
+    // -- 8. Determine seasons from brightness & thickness --
+    if(guessThickness==='thick'||guessThickness==='ultra_thick'){guessSeasons=['autumn','winter']}
+    else if(guessThickness==='medium'){guessSeasons=['spring','autumn']}
+    else{guessSeasons=['spring','summer']}
+
+    // -- 9. Generate name suggestion --
+    const colorName=COLORS[dominantColor]?.name||'';
+    const subName=SUB_NAMES[guessSub]||'';
+    let guessName=colorName+subName;
+
+    // -- 10. Build confirmation form --
+    renderImportForm({
+      guessCat,guessSub,guessColor:dominantColor,guessThickness,guessStyles,guessSeasons,guessName,
+      confidence,dominantPct,isTwoTone,secondColor,topDominant:topDominant?.[0],bottomDominant:bottomDominant?.[0],
+      avgSat,avgBright,objAspect,widthCoverage,heightCoverage
+    });
+  };
+  img.src=dataUrl;
+}
+
+function renderImportForm(r){
+  const catOpts=Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${k===r.guessCat?'selected':''}>${v.name}</option>`).join('');
+  const subOpts=(CATS[r.guessCat]?.subs||[]).map(s=>`<option value="${s}" ${s===r.guessSub?'selected':''}>${SUB_NAMES[s]||s}</option>`).join('');
+  const colorOpts=Object.entries(COLORS).map(([k,v])=>`<option value="${k}" ${k===r.guessColor?'selected':''}>${v.name}</option>`).join('');
+  const thickNames={ultra_light:'极薄',light:'薄',medium:'中等',thick:'厚',ultra_thick:'极厚'};
+  const thickOpts=Object.keys(thickNames).map(t=>`<option value="${t}" ${t===r.guessThickness?'selected':''}>${thickNames[t]}</option>`).join('');
+  const seasonOpts=Object.entries(SEASONS).map(([k,v])=>`<option value="${k}" ${r.guessSeasons.includes(k)?'selected':''}>${v}</option>`).join('');
+  const styleOpts=Object.entries(STYLES).map(([k,v])=>`<option value="${k}" ${r.guessStyles.includes(k)?'selected':''}>${v}</option>`).join('');
+
+  const confText=r.confidence==='high'?'高置信度':r.confidence==='mid'?'中等置信度':'低置信度，请仔细核对';
+  const colorHex=COLORS[r.guessColor]?.hex||'#CBD5E1';
+
+  document.getElementById('import-loading').style.display='none';
+  document.getElementById('import-preview').style.display='block';
+
+  document.getElementById('import-fields').innerHTML=`
+    <div style="background:var(--bg2);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">AI 识别结果</div>
+        <span class="recog-badge ${r.confidence}">${confText}</span>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--text2)">
+        <span class="import-color-swatch"><span class="sw" style="background:${colorHex}"></span>主色：${COLORS[r.guessColor]?.name||r.guessColor} (${r.dominantPct}%)</span>
+        ${r.secondColor?`<span class="import-color-swatch"><span class="sw" style="background:${COLORS[r.secondColor]?.hex||'#ccc'}"></span>次色：${COLORS[r.secondColor]?.name||r.secondColor}</span>`:''}
+        <span>类别：${CATS[r.guessCat]?.name||r.guessCat}</span>
+        <span>子类型：${SUB_NAMES[r.guessSub]||r.guessSub}</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>衣物名称</label><input type="text" class="form-control" id="i-name" value="${r.guessName}" placeholder="如：白色棉质T恤"></div>
+      <div class="form-group"><label>类别</label><select class="form-control" id="i-cat" onchange="updateImportSub()">${catOpts}</select></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>子类型</label><select class="form-control" id="i-sub">${subOpts}</select></div>
+      <div class="form-group"><label>颜色</label><select class="form-control" id="i-color">${colorOpts}</select></div>
+      <div class="form-group"><label>厚度</label><select class="form-control" id="i-thickness">${thickOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>适用季节（Ctrl多选）</label><select class="form-control" id="i-season" multiple size="4">${seasonOpts}</select></div>
+      <div class="form-group"><label>风格标签（Ctrl多选）</label><select class="form-control" id="i-styles" multiple size="4">${styleOpts}</select></div>
+    </div>
+  `;
 }
 function simulateAIRecognize(file){
   const fname=file.name.toLowerCase();
