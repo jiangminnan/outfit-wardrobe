@@ -306,7 +306,217 @@ textarea.form-control{resize:vertical;min-height:60px}
     <div class="form-row-4">
       <div class="form-group">
         <label>所在城市</label>
-        <input type="text" class="form-control" id="rec-city" placeholder="如：上海" value="上海">
+        <select class="form-control" id="rec-city" onchange="fillWeather()">
+          <optgroup label="直辖市">
+            <option value="北京">北京</option>
+            <option value="上海" selected>上海</option>
+            <option value="天津">天津</option>
+            <option value="重庆">重庆</option>
+          </optgroup>
+          <optgroup label="安徽">
+            <option value="合肥">合肥</option>
+            <option value="芜湖">芜湖</option>
+            <option value="蚌埠">蚌埠</option>
+            <option value="安庆">安庆</option>
+            <option value="马鞍山">马鞍山</option>
+          </optgroup>
+          <optgroup label="福建">
+            <option value="福州">福州</option>
+            <option value="厦门">厦门</option>
+            <option value="泉州">泉州</option>
+            <option value="漳州">漳州</option>
+          </optgroup>
+          <optgroup label="广东">
+            <option value="广州">广州</option>
+            <option value="深圳">深圳</option>
+            <option value="东莞">东莞</option>
+            <option value="佛山">佛山</option>
+            <option value="珠海">珠海</option>
+            <option value="中山">中山</option>
+            <option value="惠州">惠州</option>
+            <option value="汕头">汕头</option>
+            <option value="湛江">湛江</option>
+          </optgroup>
+          <optgroup label="甘肃">
+            <option value="兰州">兰州</option>
+            <option value="天水">天水</option>
+          </optgroup>
+          <optgroup label="广西">
+            <option value="南宁">南宁</option>
+            <option value="柳州">柳州</option>
+            <option value="桂林">桂林</option>
+            <option value="北海">北海</option>
+          </optgroup>
+          <optgroup label="贵州">
+            <option value="贵阳">贵阳</option>
+            <option value="遵义">遵义</option>
+            <option value="六盘水">六盘水</option>
+          </optgroup>
+          <optgroup label="海南">
+            <option value="海口">海口</option>
+            <option value="三亚">三亚</option>
+            <option value="三沙">三沙</option>
+          </optgroup>
+          <optgroup label="河北">
+            <option value="石家庄">石家庄</option>
+            <option value="唐山">唐山</option>
+            <option value="保定">保定</option>
+            <option value="廊坊">廊坊</option>
+            <option value="邯郸">邯郸</option>
+            <option value="秦皇岛">秦皇岛</option>
+            <option value="张家口">张家口</option>
+            <option value="承德">承德</option>
+          </optgroup>
+          <optgroup label="河南">
+            <option value="郑州">郑州</option>
+            <option value="洛阳">洛阳</option>
+            <option value="开封">开封</option>
+            <option value="新乡">新乡</option>
+            <option value="南阳">南阳</option>
+            <option value="许昌">许昌</option>
+          </optgroup>
+          <optgroup label="黑龙江">
+            <option value="哈尔滨">哈尔滨</option>
+            <option value="齐齐哈尔">齐齐哈尔</option>
+            <option value="大庆">大庆</option>
+            <option value="牡丹江">牡丹江</option>
+          </optgroup>
+          <optgroup label="湖北">
+            <option value="武汉">武汉</option>
+            <option value="宜昌">宜昌</option>
+            <option value="襄阳">襄阳</option>
+            <option value="荆州">荆州</option>
+            <option value="黄冈">黄冈</option>
+          </optgroup>
+          <optgroup label="湖南">
+            <option value="长沙">长沙</option>
+            <option value="株洲">株洲</option>
+            <option value="湘潭">湘潭</option>
+            <option value="衡阳">衡阳</option>
+            <option value="岳阳">岳阳</option>
+            <option value="常德">常德</option>
+          </optgroup>
+          <optgroup label="吉林">
+            <option value="长春">长春</option>
+            <option value="吉林">吉林</option>
+            <option value="延边">延边</option>
+          </optgroup>
+          <optgroup label="江苏">
+            <option value="南京">南京</option>
+            <option value="苏州">苏州</option>
+            <option value="无锡">无锡</option>
+            <option value="常州">常州</option>
+            <option value="南通">南通</option>
+            <option value="徐州">徐州</option>
+            <option value="扬州">扬州</option>
+            <option value="盐城">盐城</option>
+            <option value="泰州">泰州</option>
+            <option value="镇江">镇江</option>
+            <option value="连云港">连云港</option>
+          </optgroup>
+          <optgroup label="江西">
+            <option value="南昌">南昌</option>
+            <option value="九江">九江</option>
+            <option value="赣州">赣州</option>
+            <option value="上饶">上饶</option>
+          </optgroup>
+          <optgroup label="辽宁">
+            <option value="沈阳">沈阳</option>
+            <option value="大连">大连</option>
+            <option value="鞍山">鞍山</option>
+            <option value="抚顺">抚顺</option>
+            <option value="丹东">丹东</option>
+            <option value="锦州">锦州</option>
+            <option value="营口">营口</option>
+          </optgroup>
+          <optgroup label="内蒙古">
+            <option value="呼和浩特">呼和浩特</option>
+            <option value="包头">包头</option>
+            <option value="鄂尔多斯">鄂尔多斯</option>
+            <option value="赤峰">赤峰</option>
+          </optgroup>
+          <optgroup label="宁夏">
+            <option value="银川">银川</option>
+            <option value="石嘴山">石嘴山</option>
+          </optgroup>
+          <optgroup label="青海">
+            <option value="西宁">西宁</option>
+            <option value="海东">海东</option>
+          </optgroup>
+          <optgroup label="山东">
+            <option value="济南">济南</option>
+            <option value="青岛">青岛</option>
+            <option value="烟台">烟台</option>
+            <option value="潍坊">潍坊</option>
+            <option value="临沂">临沂</option>
+            <option value="淄博">淄博</option>
+            <option value="威海">威海</option>
+            <option value="日照">日照</option>
+            <option value="德州">德州</option>
+            <option value="聊城">聊城</option>
+          </optgroup>
+          <optgroup label="山西">
+            <option value="太原">太原</option>
+            <option value="大同">大同</option>
+            <option value="运城">运城</option>
+            <option value="临汾">临汾</option>
+            <option value="长治">长治</option>
+          </optgroup>
+          <optgroup label="陕西">
+            <option value="西安">西安</option>
+            <option value="宝鸡">宝鸡</option>
+            <option value="咸阳">咸阳</option>
+            <option value="渭南">渭南</option>
+            <option value="延安">延安</option>
+            <option value="汉中">汉中</option>
+          </optgroup>
+          <optgroup label="四川">
+            <option value="成都">成都</option>
+            <option value="绵阳">绵阳</option>
+            <option value="德阳">德阳</option>
+            <option value="南充">南充</option>
+            <option value="宜宾">宜宾</option>
+            <option value="泸州">泸州</option>
+            <option value="乐山">乐山</option>
+          </optgroup>
+          <optgroup label="西藏">
+            <option value="拉萨">拉萨</option>
+            <option value="日喀则">日喀则</option>
+            <option value="林芝">林芝</option>
+          </optgroup>
+          <optgroup label="新疆">
+            <option value="乌鲁木齐">乌鲁木齐</option>
+            <option value="克拉玛依">克拉玛依</option>
+            <option value="喀什">喀什</option>
+            <option value="伊犁">伊犁</option>
+          </optgroup>
+          <optgroup label="云南">
+            <option value="昆明">昆明</option>
+            <option value="曲靖">曲靖</option>
+            <option value="大理">大理</option>
+            <option value="丽江">丽江</option>
+            <option value="西双版纳">西双版纳</option>
+          </optgroup>
+          <optgroup label="浙江">
+            <option value="杭州">杭州</option>
+            <option value="宁波">宁波</option>
+            <option value="温州">温州</option>
+            <option value="绍兴">绍兴</option>
+            <option value="嘉兴">嘉兴</option>
+            <option value="金华">金华</option>
+            <option value="台州">台州</option>
+            <option value="湖州">湖州</option>
+            <option value="丽水">丽水</option>
+            <option value="衢州">衢州</option>
+            <option value="舟山">舟山</option>
+          </optgroup>
+          <optgroup label="港澳台">
+            <option value="香港">香港</option>
+            <option value="澳门">澳门</option>
+            <option value="台北">台北</option>
+            <option value="高雄">高雄</option>
+          </optgroup>
+        </select>
       </div>
       <div class="form-group">
         <label>性别</label>
@@ -596,9 +806,10 @@ function toggleVoice(){
 // Process voice/text input: parse scene, city, style, etc.
 function processVoiceInput(text){
   const lc=text.toLowerCase();
-  // Try to detect city
-  const cityKeywords=['北京','上海','广州','深圳','杭州','南京','成都','武汉','西安','重庆','天津','苏州','长沙','青岛','大连','宁波','厦门','福州','无锡','合肥','郑州','哈尔滨','沈阳','济南','昆明','贵阳','南昌','太原','兰州','海口','三亚','拉萨','乌鲁木齐','银川','西宁','呼和浩特'];
-  for(const c of cityKeywords){if(text.includes(c)){document.getElementById('rec-city').value=c;break}}
+  // Try to detect city from select options
+  const citySelect=document.getElementById('rec-city');
+  const cityOptions=Array.from(citySelect.options).map(o=>o.value);
+  for(const c of cityOptions){if(text.includes(c)){citySelect.value=c;fillWeather();break}}
   // Detect scene
   const sceneMap=[
     ['面试','interview'],['开会','meeting'],['会议','meeting'],['签约','meeting'],
@@ -1049,8 +1260,8 @@ function confirmImport(){
 //  WEATHER
 // ============================================================
 async function fillWeather(){
-  const city=document.getElementById('rec-city').value.trim();
-  if(!city){alert('请输入城市名');return}
+  const city=document.getElementById('rec-city').value;
+  if(!city){return}
   const pill=document.getElementById('weather-pill');
   pill.textContent='获取天气中...';
   try{
@@ -1062,7 +1273,7 @@ async function fillWeather(){
     const humidity=cur.humidity;
     const wind=cur.windspeedKmph;
     document.getElementById('rec-temp').value=temp;
-    pill.textContent=`${temp}° ${cond} · 湿度${humidity}%`;
+    pill.textContent=`${city} ${temp}° ${cond} · 湿度${humidity}%`;
     pill.dataset.temp=temp;pill.dataset.cond=cond;pill.dataset.humidity=humidity;pill.dataset.wind=wind;
     // Update hero index
     let index=92;
@@ -1267,7 +1478,7 @@ function generateOutfitPreview(combo,gender){
 }
 
 function generateOutfits(){
-  const city=document.getElementById('rec-city').value.trim();
+  const city=document.getElementById('rec-city').value;
   let scene=document.getElementById('rec-scene').value;
   const customScene=document.getElementById('rec-custom-scene')?.value.trim();
   const stylePref=document.getElementById('rec-style').value;
