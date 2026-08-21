@@ -530,7 +530,7 @@ const STYLES={'business-formal':'商务正装','business-casual':'商务休闲',
 const SEASONS={spring:'春季',summer:'夏季',autumn:'秋季',winter:'冬季'};
 const SCENES={office:'日常办公',meeting:'正式会议',client:'客户拜访',date:'约会',gathering:'朋友聚会',sports:'运动健身',travel:'旅行渡假',outdoor:'户外活动',home:'居家',festival:'节日/文化活动',interview:'面试',casual:'日常休闲',other:'其他'};
 const SCENE_STYLES={meeting:['business-formal'],'client':['business-formal','business-casual'],office:['business-casual','minimal','preppy'],date:['romantic','minimal','retro'],gathering:['casual','street','preppy'],sports:['sports'],travel:['resort','workwear','casual'],outdoor:['workwear','sports'],home:['casual'],festival:['chinoiserie','retro'],interview:['business-formal','business-casual'],casual:['casual','minimal','retro'],other:['casual','minimal','business-casual']};
-const SCENE_CATS={meeting:['outerwear','top','bottom','shoes'],office:['outerwear','top','bottom','shoes'],date:['outerwear','top','bottom','shoes'],gathering:['top','bottom','shoes'],sports:['top','bottom','shoes'],travel:['top','bottom','shoes','accessory'],outdoor:['outerwear','top','bottom','shoes'],home:['top','bottom'],casual:['top','bottom','shoes'],interview:['outerwear','top','bottom','shoes'],other:['top','bottom','shoes']};
+const SCENE_CATS={meeting:['top','bottom','shoes'],office:['top','bottom','shoes'],date:['top','bottom','shoes'],gathering:['top','bottom','shoes'],sports:['top','bottom','shoes'],travel:['top','bottom','shoes','accessory'],outdoor:['top','bottom','shoes'],home:['top','bottom'],casual:['top','bottom','shoes'],interview:['top','bottom','shoes'],other:['top','bottom','shoes']};
 const TEMP_GUIDE=[[32,999,null,'ultra_light'],[28,31,null,'light'],[24,27,null,'light'],[20,23,['windbreaker','cardigan','blazer'],'light'],[15,19,['jacket','coat','blazer'],'medium'],[10,14,['coat','blazer','down_jacket'],'medium'],[5,9,['down_jacket','coat'],'thick'],[0,4,['down_jacket','coat'],'thick'],[-99,0,['down_jacket'],'ultra_thick']];
 
 // ============================================================
@@ -1035,22 +1035,7 @@ function renderImportForm(r){
     </div>
   `;
 }
-function simulateAIRecognize(file){
-  const fname=file.name.toLowerCase();
-  let guessCat='top',guessSub='tshirt',guessColor='black';
-  const kw={jacket:['outerwear','jacket'],coat:['outerwear','coat'],blazer:['outerwear','blazer'],shirt:['top','shirt'],tshirt:['top','tshirt'],polo:['top','polo'],sweater:['top','sweater'],hoodie:['top','hoodie'],jeans:['bottom','jeans'],pants:['bottom','pants'],shorts:['bottom','shorts'],skirt:['bottom','skirt'],dress:['set','dress'],sneakers:['shoes','sneakers'],boots:['shoes','boots'],sandals:['shoes','sandals'],hat:['accessory','hat'],scarf:['accessory','scarf']};
-  for(const[k,v]of Object.entries(kw)){if(fname.includes(k)){guessCat=v[0];guessSub=v[1];break}}
-  const colors={white:'white',black:'black',red:'red',blue:'blue',green:'green',gray:'gray',grey:'gray',navy:'navy',brown:'brown',pink:'pink'};
-  for(const[k,v]of Object.entries(colors)){if(fname.includes(k)){guessColor=v;break}}
-  const catOpts=Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${k===guessCat?'selected':''}>${v.name}</option>`).join('');
-  const subOpts=(CATS[guessCat]?.subs||[]).map(s=>`<option value="${s}" ${s===guessSub?'selected':''}>${SUB_NAMES[s]||s}</option>`).join('');
-  const colorOpts=Object.entries(COLORS).map(([k,v])=>`<option value="${k}" ${k===guessColor?'selected':''}>${v.name}</option>`).join('');
-  const thickNames={ultra_light:'极薄',light:'薄',medium:'中等',thick:'厚',ultra_thick:'极厚'};
-  const thickOpts=Object.keys(thickNames).map(t=>`<option value="${t}" ${t==='light'?'selected':''}>${thickNames[t]}</option>`).join('');
-  const seasonOpts=Object.entries(SEASONS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
-  const styleOpts=Object.entries(STYLES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
-  document.getElementById('import-fields').innerHTML=`<div class="form-row"><div class="form-group"><label>衣物名称</label><input type="text" class="form-control" id="i-name" placeholder="如：白色棉质T恤"></div><div class="form-group"><label>类别</label><select class="form-control" id="i-cat" onchange="updateImportSub()">${catOpts}</select></div></div><div class="form-row-3"><div class="form-group"><label>子类型</label><select class="form-control" id="i-sub">${subOpts}</select></div><div class="form-group"><label>颜色</label><select class="form-control" id="i-color">${colorOpts}</select></div><div class="form-group"><label>厚度</label><select class="form-control" id="i-thickness">${thickOpts}</select></div></div><div class="form-row"><div class="form-group"><label>适用季节</label><select class="form-control" id="i-season" multiple size="4">${seasonOpts}</select></div><div class="form-group"><label>风格标签</label><select class="form-control" id="i-styles" multiple size="4">${styleOpts}</select></div></div>`;
-}
+
 function updateImportSub(){const cat=document.getElementById('i-cat').value;document.getElementById('i-sub').innerHTML=(CATS[cat]?.subs||[]).map(s=>`<option value="${s}">${SUB_NAMES[s]||s}</option>`).join('')}
 function confirmImport(){
   const name=document.getElementById('i-name').value.trim();
@@ -1189,10 +1174,12 @@ function generateCombos(clothes,scene,temp,note,stylePref,gender){
     if(temp<20){
       const ow=expandedPool.filter(c=>c.category==='outerwear');
       if(ow.length>0){let owPool=ow;if(guide.outerwear){const pref=ow.filter(c=>guide.outerwear.includes(c.subCategory));if(pref.length>0)owPool=pref}combo.outerwear=pickRandom(owPool,1)[0]}
-    }else if(optional.includes('outerwear')){
-      const ow=expandedPool.filter(c=>c.category==='outerwear');
-      if(ow.length>0){let owPool=ow;if(guide.outerwear){const pref=ow.filter(c=>guide.outerwear.includes(c.subCategory));if(pref.length>0)owPool=pref}combo.outerwear=pickRandom(owPool,1)[0]}
+    }else if(temp>=20&&temp<24&&optional.includes('outerwear')){
+      // Only consider light outerwear (blazer, cardigan, windbreaker) in mild weather 20-23C
+      const ow=expandedPool.filter(c=>c.category==='outerwear'&&['blazer','cardigan','windbreaker','vest'].includes(c.subCategory));
+      if(ow.length>0&&Math.random()>0.5){combo.outerwear=pickRandom(ow,1)[0]}
     }
+    // temp >= 24: no outerwear at all
     // Try to use a set (dress/jumpsuit) for scenarios that allow it
     if(scene==='date'||scene==='casual'||scene==='festival'||scene==='other'){
       const sets=expandedPool.filter(c=>c.category==='set');
